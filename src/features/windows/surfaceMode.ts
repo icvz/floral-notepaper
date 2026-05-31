@@ -1,6 +1,7 @@
 import type { WindowBounds } from "./api";
 
 export type NoteSurfaceMode = "pad" | "tile";
+export type TileZLevel = "desktop" | "topmost";
 
 export const NOTE_SURFACE_MODE_EVENT = "floral-notepaper:surface-mode";
 

@@ -25,7 +25,10 @@
       "close": "Unpin",
       "copy": "Copy",
       "save": "Save",
-      "switchToPad": "Switch to Window"
+      "switchToPad": "Switch to Window",
+      "toggleZLevel": "Toggle Z-Level",
+      "switchToTopmost": "Switch to Topmost",
+      "switchToDesktop": "Switch to Above Desktop"
     }
   },
   "errors": {
@@ -165,7 +168,10 @@
     "tooltip": {
       "close": "Close",
       "openInEditor": "Open in Editor",
-      "pinToTile": "Pin to Tile"
+      "pinToTile": "Pin to Tile",
+      "unpin": "Unpin",
+      "switchToTopmost": "Switch to Topmost",
+      "switchToDesktop": "Switch to Above Desktop"
     }
   },
   "settings": {

@@ -17,7 +17,7 @@ import {
   closeCurrentWindow,
   getCurrentWindowBounds,
   recycleCurrentNotepad,
-  setCurrentWindowAlwaysOnTop,
+  setCurrentWindowZLevel,
   showCurrentWindow,
   startCurrentWindowDrag,
   startCurrentWindowResize,
@@ -42,6 +42,7 @@ import {
   surfaceModeFromEvent,
 } from "../features/windows/surfaceMode";
 import type { NoteSurfaceMode } from "../features/windows/surfaceMode";
+import type { TileZLevel } from "../features/windows/surfaceMode";
 import {
   emitTileWindowUnpinned,
   tileSurfaceModeUnpinNoteId,
@@ -126,6 +127,7 @@ export function NotePad({
   const [tileColorMode, setTileColorMode] = useState<TileColorMode>("system");
   const [surfaceFontSize, setSurfaceFontSize] = useState(14);
   const [tileRenderMarkdown, setTileRenderMarkdown] = useState(false);
+  const [tileZLevel, setTileZLevel] = useState<TileZLevel>("desktop");
   const [tileColor, setTileColor] = useState(() =>
     resolveTileColor("system", normalizeTileColor(initialTileColor)),
   );
@@ -330,7 +332,8 @@ export function NotePad({
 
       try {
         if (nextMode === "tile") {
-          await setCurrentWindowAlwaysOnTop(true);
+          setTileZLevel("desktop");
+          await setCurrentWindowZLevel("desktop");
         }
 
         const currentBounds = await getCurrentWindowBounds();
@@ -357,8 +360,8 @@ export function NotePad({
 
   useEffect(() => {
     if (surfaceMode !== "tile") return;
-    void setCurrentWindowAlwaysOnTop(true).catch(() => undefined);
-  }, [surfaceMode]);
+    void setCurrentWindowZLevel(tileZLevel).catch(() => undefined);
+  }, [surfaceMode, tileZLevel]);
 
   const handleSave = useCallback(async () => {
     setErrorMessage(null);
@@ -428,6 +431,10 @@ export function NotePad({
     }
   }, [content, t]);
 
+  const handleToggleZLevel = useCallback(() => {
+    setTileZLevel((prev) => (prev === "desktop" ? "topmost" : "desktop"));
+  }, []);
+
   useEffect(() => {
     function handleSurfaceActionRequest(event: Event) {
       const action = surfaceActionFromEvent(event);
@@ -448,6 +455,11 @@ export function NotePad({
         return;
       }
 
+      if (action === "toggleZLevel") {
+        handleToggleZLevel();
+        return;
+      }
+
       void switchSurfaceMode("pad");
     }
 
@@ -455,7 +467,7 @@ export function NotePad({
     return () => {
       window.removeEventListener(NOTE_SURFACE_ACTION_EVENT, handleSurfaceActionRequest);
     };
-  }, [copyTileContent, handleClose, handleSave, switchSurfaceMode]);
+  }, [copyTileContent, handleClose, handleSave, handleToggleZLevel, switchSurfaceMode]);
 
   useEffect(() => {
     if (!noteSurfaceAutoSave || mode !== "new" || status !== "dirty") {
@@ -506,14 +518,45 @@ export function NotePad({
           data-surface-mode={surfaceMode}
           data-context-menu="tile"
           data-note-id={tileNoteId}
+          data-tile-z-level={tileZLevel}
           onMouseDown={handleDrag}
         >
           <button
             type="button"
-            aria-label="取消钉屏"
-            title="取消钉屏"
+            aria-label={
+              tileZLevel === "topmost"
+                ? t("notepad.tooltip.switchToDesktop", { defaultValue: "切换到桌面上一层" })
+                : t("notepad.tooltip.switchToTopmost", { defaultValue: "切换到最顶层" })
+            }
+            title={
+              tileZLevel === "topmost"
+                ? t("notepad.tooltip.switchToDesktop", { defaultValue: "切换到桌面上一层" })
+                : t("notepad.tooltip.switchToTopmost", { defaultValue: "切换到最顶层" })
+            }
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={() => void handleClose()}
+            onClick={handleToggleZLevel}
+            className="absolute top-2 right-8 z-10 w-6 h-6 flex items-center justify-center rounded-full text-ink-ghost/70 hover:text-ink-soft hover:bg-paper-warm/80 transition-colors cursor-pointer"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill={tileZLevel === "topmost" ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 17v5" />
+              <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1 1 1 0 0 1 1 1z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label={t("notepad.tooltip.unpin", { defaultValue: "取消钉层" })}
+            title={t("notepad.tooltip.unpin", { defaultValue: "取消钉层" })}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={() => void switchSurfaceMode("pad")}
             className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full text-ink-ghost/70 hover:text-red-400 hover:bg-danger-bg/80 transition-colors cursor-pointer"
           >
             <svg

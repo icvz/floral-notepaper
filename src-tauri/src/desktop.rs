@@ -1497,12 +1497,72 @@ fn open_tile_window_now(
             title: locales::tile_window_title(locale).to_string(),
             specs,
             decorations: false,
-            always_on_top: true,
+            always_on_top: false,
             shadow: false,
             skip_taskbar: true,
             bounds,
         },
     )
+}
+
+/// Sets the z-order level for the current tile window.
+///
+/// - `"desktop"`: Places the window one level above the desktop (not always-on-top).
+///   On Windows, this uses `SetWindowPos(HWND_BOTTOM, ...)` to push the window to
+///   the bottom of the z-order while staying above the desktop.
+///   On macOS/Linux, this simply disables always-on-top.
+/// - `"topmost"`: Makes the window always-on-top.
+#[tauri::command]
+pub fn set_tile_z_level(window: Window, level: String) -> Result<(), AppError> {
+    match level.as_str() {
+        "topmost" => {
+            window.set_always_on_top(true)?;
+        }
+        "desktop" => {
+            window.set_always_on_top(false)?;
+
+            #[cfg(target_os = "windows")]
+            {
+                const HWND_BOTTOM: isize = 1;
+                const SWP_NOSIZE: u32 = 0x0001;
+                const SWP_NOMOVE: u32 = 0x0002;
+                const SWP_NOACTIVATE: u32 = 0x0010;
+
+                extern "system" {
+                    fn SetWindowPos(
+                        hwnd: isize,
+                        hwnd_insert_after: isize,
+                        x: i32,
+                        y: i32,
+                        cx: i32,
+                        cy: i32,
+                        flags: u32,
+                    ) -> i32;
+                }
+
+                let hwnd = window.hwnd()?.0 as isize;
+                unsafe {
+                    SetWindowPos(
+                        hwnd,
+                        HWND_BOTTOM,
+                        0,
+                        0,
+                        0,
+                        0,
+                        SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE,
+                    );
+                }
+            }
+        }
+        _ => {
+            return Err(AppError {
+                code: "invalidZLevel".into(),
+                message: format!("invalid z-level: {level}, expected \"desktop\" or \"topmost\""),
+                details: Default::default(),
+            });
+        }
+    }
+    Ok(())
 }
 
 fn toggle_tile_window_now(

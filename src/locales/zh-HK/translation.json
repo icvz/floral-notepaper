@@ -25,7 +25,10 @@
       "close": "取消釘屏",
       "copy": "複製",
       "save": "儲存",
-      "switchToPad": "轉為小窗"
+      "switchToPad": "轉為小窗",
+      "toggleZLevel": "切換層級",
+      "switchToTopmost": "切換到最頂層",
+      "switchToDesktop": "切換到桌面上一層"
     }
   },
   "errors": {
@@ -165,7 +168,10 @@
     "tooltip": {
       "close": "關閉",
       "openInEditor": "在編輯器中開啟",
-      "pinToTile": "轉為磁貼"
+      "pinToTile": "轉為磁貼",
+      "unpin": "取消釘層",
+      "switchToTopmost": "切換到最頂層",
+      "switchToDesktop": "切換到桌面上一層"
     }
   },
   "settings": {

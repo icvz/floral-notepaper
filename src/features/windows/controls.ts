@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { WindowBounds } from "./api";
+import type { TileZLevel } from "./surfaceMode";
 
 export type ResizeDirection = "NorthWest" | "NorthEast" | "SouthWest" | "SouthEast";
 
@@ -39,6 +40,10 @@ export function isCurrentWindowMaximized(): Promise<boolean> {
 
 export function setCurrentWindowAlwaysOnTop(enabled: boolean): Promise<void> {
   return getCurrentWindow().setAlwaysOnTop(enabled);
+}
+
+export function setCurrentWindowZLevel(level: TileZLevel): Promise<void> {
+  return invoke("set_tile_z_level", { level });
 }
 
 export function startCurrentWindowDrag(): Promise<void> {

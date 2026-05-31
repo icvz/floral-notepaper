@@ -1,5 +1,6 @@
 import { t, type TFunction } from "i18next";
 import type { NoteSurfaceAction } from "./surfaceActions";
+import type { TileZLevel } from "./surfaceMode";
 
 export interface TileContextMenuItem {
   action: NoteSurfaceAction;
@@ -7,7 +8,10 @@ export interface TileContextMenuItem {
   tone?: "danger";
 }
 
-export function getTileContextMenuItems(translate: TFunction = t): TileContextMenuItem[] {
+export function getTileContextMenuItems(
+  zLevel: TileZLevel = "desktop",
+  translate: TFunction = t,
+): TileContextMenuItem[] {
   return [
     {
       action: "copy",
@@ -16,6 +20,17 @@ export function getTileContextMenuItems(translate: TFunction = t): TileContextMe
     {
       action: "save",
       label: translate("contextMenu.tile.save", { defaultValue: "保存" }),
+    },
+    {
+      action: "toggleZLevel",
+      label:
+        zLevel === "topmost"
+          ? translate("contextMenu.tile.switchToDesktop", {
+              defaultValue: "切换到桌面上一层",
+            })
+          : translate("contextMenu.tile.switchToTopmost", {
+              defaultValue: "切换到最顶层",
+            }),
     },
     {
       action: "switchToPad",

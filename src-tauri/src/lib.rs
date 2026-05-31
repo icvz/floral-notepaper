@@ -319,6 +319,7 @@ pub fn run() {
             recycle_notepad_window,
             open_tile_window,
             toggle_tile_window,
+            desktop::set_tile_z_level,
             open_note_in_editor,
             take_startup_file
         ])

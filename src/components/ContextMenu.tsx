@@ -5,6 +5,7 @@ import { getConfig } from "../features/settings/api";
 import type { AppConfig } from "../features/settings/types";
 import { requestSurfaceAction } from "../features/windows/surfaceActions";
 import { getTileContextMenuItems } from "../features/windows/tileContextMenu";
+import type { TileZLevel } from "../features/windows/surfaceMode";
 
 interface MenuState {
   x: number;
@@ -17,9 +18,13 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
   const { t } = useTranslation();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [menuClosing, setMenuClosing] = useState(false);
+  const [tileZLevel, setTileZLevel] = useState<TileZLevel>("desktop");
   const menuRef = useRef<HTMLDivElement>(null);
   const tileCtrlCloseRef = useRef(true);
-  const tileContextMenuItems = useMemo(() => getTileContextMenuItems(t), [t]);
+  const tileContextMenuItems = useMemo(
+    () => getTileContextMenuItems(tileZLevel, t),
+    [tileZLevel, t],
+  );
 
   useEffect(() => {
     getConfig()
@@ -63,6 +68,10 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 4;
 
       if (tileTarget) {
+        const zLevelAttr = tileTarget.dataset.tileZLevel;
+        if (zLevelAttr === "topmost" || zLevelAttr === "desktop") {
+          setTileZLevel(zLevelAttr);
+        }
         setMenuClosing(false);
         setMenu({
           x,
