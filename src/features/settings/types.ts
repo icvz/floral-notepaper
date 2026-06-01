@@ -36,4 +36,5 @@ export interface AppConfig {
   backgroundScale?: number;
   backgroundPositionX?: number;
   backgroundPositionY?: number;
+  readModeDefault: boolean;
 }

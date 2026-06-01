@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant User
+    participant Browser
+    participant MainWindow as MainWindow.tsx
+    participant Rust as Rust Backend
+    participant MarkdownPreview as MarkdownPreview.tsx
+
+    User->>Browser: 按下 Ctrl+E
+    Browser->>MainWindow: keydown event (ctrlKey + key='e')
+    
+    alt selectedId === null
+        MainWindow-->>Browser: 忽略（无选中笔记）
+    end
+
+    alt readingMode === false (进入阅读模式)
+        MainWindow->>MainWindow: savedViewMode ← viewMode
+        MainWindow->>MainWindow: setReadingMode(true)
+        MainWindow->>MainWindow: 隐藏格式化工具栏
+        MainWindow->>MainWindow: 隐藏 SlidingButtonGroup
+        MainWindow->>MainWindow: 隐藏预览面板
+        MainWindow->>MainWindow: textarea → MarkdownPreview (只读)
+        MainWindow->>MainWindow: title input → readOnly
+        MainWindow->>MarkdownPreview: 渲染 content
+        Note over MainWindow: UI 过渡动画 (animate-view-fade)
+    else readingMode === true (退出阅读模式)
+        MainWindow->>MainWindow: setReadingMode(false)
+        MainWindow->>MainWindow: viewMode ← savedViewMode
+        MainWindow->>MainWindow: 显示格式化工具栏
+        MainWindow->>MainWindow: 显示 SlidingButtonGroup
+        MainWindow->>MainWindow: 恢复 textarea + 预览面板
+        MainWindow->>MainWindow: title input → editable
+        Note over MainWindow: UI 过渡动画 (animate-view-fade)
+    end
+
+    opt 持久化 readModeDefault
+        MainWindow->>MainWindow: persistSettings(config + readModeDefault)
+        MainWindow->>Rust: config_save({...config, readModeDefault: readingMode})
+        Rust-->>MainWindow: saved config
+    end

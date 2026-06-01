@@ -1,0 +1,79 @@
+classDiagram
+    class AppConfig~TS~ {
+        +string locale
+        +string notesDir
+        +string globalShortcut
+        +boolean closeToTray
+        +boolean autostart
+        +string defaultViewMode
+        +boolean noteAutoSave
+        +boolean noteSurfaceAutoSave
+        +string tileColor
+        +string tileColorMode
+        +string theme
+        +number fontSize
+        +number surfaceFontSize
+        +number tabIndentSize
+        +boolean externalFileAutoSave
+        +boolean rememberSurfaceSize
+        +boolean tileCtrlClose
+        +boolean tileRenderMarkdown
+        +boolean renderHtmlMarkdown
+        +boolean readModeDefault
+        +string toggleVisibilityShortcut
+        +boolean openAtCursor
+    }
+
+    class AppConfig~Rust~ {
+        +String locale
+        +String notes_dir
+        +String global_shortcut
+        +bool close_to_tray
+        +bool autostart
+        +String default_view_mode
+        +bool note_auto_save
+        +bool note_surface_auto_save
+        +String tile_color
+        +String tile_color_mode
+        +String theme
+        +u32 font_size
+        +u32 surface_font_size
+        +u32 tab_indent_size
+        +bool external_file_auto_save
+        +bool remember_surface_size
+        +bool tile_ctrl_close
+        +bool tile_render_markdown
+        +bool render_html_markdown
+        +bool read_mode_default
+        +String toggle_visibility_shortcut
+        +bool open_at_cursor
+    }
+
+    class MainWindowState {
+        +boolean readingMode
+        +ViewMode savedViewMode
+        +ViewMode viewMode
+        +string selectedId
+        +string content
+        +string title
+        +SaveState saveState
+    }
+
+    class MarkdownPreview {
+        +string content
+        +number fontSize
+        +boolean renderHtml
+        +ReactNode render()
+    }
+
+    class ViewMode {
+        <<enumeration>>
+        edit
+        split
+        preview
+    }
+
+    AppConfig~TS~ --|> AppConfig~Rust~ : serde camelCase 映射
+    MainWindowState --> ViewMode : uses
+    MainWindowState --> MarkdownPreview : conditionally renders
+    MainWindowState --> AppConfig~TS~ : readModeDefault 初始化

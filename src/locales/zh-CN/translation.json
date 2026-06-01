@@ -112,6 +112,11 @@
         "saving": "保存中"
       }
     },
+    "readingMode": {
+      "toggle": "阅读模式",
+      "tooltipEnter": "进入阅读模式 (Ctrl+E)",
+      "tooltipExit": "退出阅读模式 (Ctrl+E)"
+    },
     "toolbar": {
       "blockMath": "块级公式",
       "bold": "粗体",

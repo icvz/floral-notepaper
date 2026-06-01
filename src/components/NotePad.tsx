@@ -126,7 +126,7 @@ export function NotePad({
   const [tileColorRaw, setTileColorRaw] = useState(normalizeTileColor(initialTileColor));
   const [tileColorMode, setTileColorMode] = useState<TileColorMode>("system");
   const [surfaceFontSize, setSurfaceFontSize] = useState(14);
-  const [tileRenderMarkdown, setTileRenderMarkdown] = useState(false);
+  const [_tileRenderMarkdown, setTileRenderMarkdown] = useState(false);
   const [tileZLevel, setTileZLevel] = useState<TileZLevel>("desktop");
   const [tileColor, setTileColor] = useState(() =>
     resolveTileColor("system", normalizeTileColor(initialTileColor)),
@@ -206,12 +206,27 @@ export function NotePad({
 
   useEffect(() => {
     const unlisten = listen("notes-changed", () => {
-      void refreshNotes().catch(() => undefined);
+      void refreshNotes()
+        .then((loaded) => {
+          const currentId = editingNoteId;
+          if (!currentId) return;
+          const stillExists = loaded.some((n) => n.id === currentId);
+          if (stillExists && status !== "dirty") {
+            void getNote(currentId)
+              .then((note) => {
+                setTitle(note.title);
+                setContent(note.content);
+                setStatus("saved");
+              })
+              .catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
     });
     return () => {
       void unlisten.then((fn) => fn());
     };
-  }, [refreshNotes]);
+  }, [editingNoteId, refreshNotes, status]);
 
   useEffect(() => {
     if (isStandby.current) return;
@@ -512,7 +527,7 @@ export function NotePad({
           content={errorMessage || content}
           color={tileColor}
           fontSize={surfaceFontSize}
-          renderMarkdown={!errorMessage && tileRenderMarkdown}
+          renderMarkdown={!errorMessage}
           width="100%"
           className="h-full cursor-default"
           data-surface-mode={surfaceMode}

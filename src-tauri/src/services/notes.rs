@@ -78,6 +78,8 @@ pub struct AppConfig {
     pub toggle_visibility_shortcut: String,
     #[serde(default = "default_open_at_cursor")]
     pub open_at_cursor: bool,
+    #[serde(default = "default_read_mode_default")]
+    pub read_mode_default: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -692,6 +694,7 @@ impl NoteStore {
             surface_height: None,
             toggle_visibility_shortcut: default_toggle_visibility_shortcut(),
             open_at_cursor: default_open_at_cursor(),
+            read_mode_default: false,
         }
     }
 
@@ -1052,6 +1055,10 @@ fn default_open_at_cursor() -> bool {
     true
 }
 
+fn default_read_mode_default() -> bool {
+    false
+}
+
 fn default_locale() -> String {
     "zh-CN".into()
 }
@@ -1205,6 +1212,7 @@ mod tests {
             surface_height: None,
             toggle_visibility_shortcut: String::new(),
             open_at_cursor: true,
+            read_mode_default: false,
         };
 
         store.save_config(saved.clone()).expect("save config");

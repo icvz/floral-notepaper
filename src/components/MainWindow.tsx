@@ -326,6 +326,13 @@ export function MainWindow({
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
+  const [readingMode, setReadingMode] = useState<boolean>(initialConfig?.readModeDefault ?? false);
+  const [savedViewMode, setSavedViewMode] = useState<ViewMode>(
+    normalizeViewMode(initialConfig?.defaultViewMode ?? "split"),
+  );
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
     [notes, selectedId],
@@ -782,6 +789,27 @@ export function MainWindow({
   }, [saveCurrentNote]);
 
   useEffect(() => {
+    if (!readingMode && savedViewMode !== viewMode) {
+      setViewMode(savedViewMode);
+    }
+  }, [readingMode, savedViewMode, viewMode]);
+
+  useEffect(() => {
+    if (settingsConfig) {
+      const updated = { ...settingsConfig, readModeDefault: readingMode };
+      saveConfig(updated)
+        .then((savedConfig) => {
+          setSettingsConfig(savedConfig);
+          setSavedNotesDir(savedConfig.notesDir);
+        })
+        .catch(() => {
+          // silent fail – non-critical persistence
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readingMode]);
+
+  useEffect(() => {
     if (!selectedId || saveState !== "dirty") return undefined;
     if (isExternal) {
       if (!settingsConfig?.externalFileAutoSave) return undefined;
@@ -1127,6 +1155,27 @@ export function MainWindow({
   const markDirty = () => {
     if (selectedId) setSaveState("dirty");
   };
+
+  const handleToggleReadingMode = useCallback(() => {
+    setReadingMode((prev) => {
+      if (!prev) {
+        // Entering reading mode: save current viewMode
+        setSavedViewMode(viewModeRef.current);
+      }
+      return !prev;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "e" && selectedId) {
+        e.preventDefault();
+        handleToggleReadingMode();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedId, handleToggleReadingMode]);
 
   const handleUndo = () => {
     if (!selectedId) return;
@@ -2079,12 +2128,33 @@ export function MainWindow({
                 )}
               </div>
 
-              <SlidingButtonGroup
-                options={viewModeOptions}
-                value={viewMode}
-                onChange={setViewMode}
-                buttonClassName="px-3 py-1"
-              />
+              <div className="flex items-center gap-1">
+                {!readingMode && (
+                  <SlidingButtonGroup
+                    options={viewModeOptions}
+                    value={viewMode}
+                    onChange={setViewMode}
+                    buttonClassName="px-3 py-1"
+                  />
+                )}
+                <button
+                  onClick={handleToggleReadingMode}
+                  title={
+                    readingMode
+                      ? t("main.readingMode.tooltipExit", { defaultValue: "退出编辑模式 (Ctrl+E)" })
+                      : t("main.readingMode.tooltipEnter", {
+                          defaultValue: "进入阅读模式 (Ctrl+E)",
+                        })
+                  }
+                  disabled={!selectedId}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-ink-ghost hover:text-ink-faint hover:bg-paper-warm transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <span className="text-[13px] leading-none">{readingMode ? "✏️" : "📖"}</span>
+                </button>
+                <span className="text-[10px] text-ink-ghost font-body select-none">
+                  {readingMode ? "编辑" : "阅读"}
+                </span>
+              </div>
             </div>
 
             <div
@@ -2106,6 +2176,7 @@ export function MainWindow({
                 }}
                 placeholder={t("common.untitledNote", { defaultValue: "无标题笔记" })}
                 disabled={!selectedId}
+                readOnly={readingMode}
                 className="w-full text-[20px] font-display font-bold text-ink placeholder:text-ink-ghost/50 tracking-wide disabled:opacity-60"
               />
               <div className="flex items-center gap-3 mt-1.5">
@@ -2148,6 +2219,14 @@ export function MainWindow({
                 <div className="flex-1 flex items-center justify-center text-[13px] text-ink-ghost">
                   {t("main.editor.emptyHint", { defaultValue: "选择或新建一篇笔记" })}
                 </div>
+              ) : readingMode ? (
+                <div className="flex-1 overflow-y-auto px-6 py-4 animate-view-fade">
+                  <MarkdownPreview
+                    content={content}
+                    fontSize={settingsConfig?.fontSize ?? 14}
+                    renderHtml={settingsConfig?.renderHtmlMarkdown ?? false}
+                  />
+                </div>
               ) : (
                 <>
                   {(viewMode === "edit" || viewMode === "split") && (
@@ -2155,29 +2234,31 @@ export function MainWindow({
                       className="flex flex-col min-h-0 shrink-0"
                       style={{ width: viewMode === "split" ? `${splitRatio * 100}%` : "100%" }}
                     >
-                      <div className="flex items-center gap-0.5 px-4 pt-2 pb-1 shrink-0">
-                        {toolbarButtons.map((button) => (
-                          <button
-                            key={button.label}
-                            title={button.title}
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              if (contentRef.current) {
-                                applyFormat(
-                                  contentRef.current,
-                                  button.action,
-                                  t,
-                                  setContent,
-                                  markDirty,
-                                );
-                              }
-                            }}
-                            className={`w-6 h-6 flex items-center justify-center rounded text-[11px] text-ink-ghost hover:text-ink-faint hover:bg-paper-warm transition-all cursor-pointer ${button.style}`}
-                          >
-                            {button.label}
-                          </button>
-                        ))}
-                      </div>
+                      {!readingMode && (
+                        <div className="flex items-center gap-0.5 px-4 pt-2 pb-1 shrink-0">
+                          {toolbarButtons.map((button) => (
+                            <button
+                              key={button.label}
+                              title={button.title}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                if (contentRef.current) {
+                                  applyFormat(
+                                    contentRef.current,
+                                    button.action,
+                                    t,
+                                    setContent,
+                                    markDirty,
+                                  );
+                                }
+                              }}
+                              className={`w-6 h-6 flex items-center justify-center rounded text-[11px] text-ink-ghost hover:text-ink-faint hover:bg-paper-warm transition-all cursor-pointer ${button.style}`}
+                            >
+                              {button.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="flex-1 overflow-hidden px-5 pb-4">
                         <textarea
