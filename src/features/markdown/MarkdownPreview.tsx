@@ -173,21 +173,116 @@ const components: Components = {
   ),
 };
 
+/**
+ * 预处理：修复引用打断有序列表导致序号重置的问题。
+ *
+ * 标准 Markdown 中 `>` 是块级元素，会打断 `<ol>` 产生两个独立列表，
+ * 第二个列表从 1 重新开始编号。
+ *
+ * 此函数检测夹在两个有序列表项之间的引用行，
+ * 自动在前面补 3 个空格将其嵌套进前一个列表项，
+ * 从而保持序号连续性。
+ *
+ * 示例:
+ *   1. 第一项
+ *   2. 第二项
+ *   > 引用
+ *   3. 第三项
+ *   → 引用行被缩进为 `   > 引用`，成为第 2 项的子内容
+ */
+function fixListContinuity(markdown: string): string {
+  const lines = markdown.split("\n");
+  const result: string[] = [];
+  const olRegex = /^\d+\.\s/;
+  const bqRegex = /^>\s?/;
+
+  function isOrderedListItem(line: string): boolean {
+    return olRegex.test(line.trim());
+  }
+
+  function isBlockquote(line: string): boolean {
+    return bqRegex.test(line.trim());
+  }
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (!isBlockquote(line)) {
+      result.push(line);
+      i++;
+      continue;
+    }
+
+    // 找到引用块的范围（含内部空行）
+    let bqEnd = i;
+    while (bqEnd < lines.length) {
+      const l = lines[bqEnd];
+      if (isBlockquote(l) || l.trim() === "") {
+        bqEnd++;
+      } else {
+        break;
+      }
+    }
+
+    // 向前查找：上一个非空行是否是有序列表项
+    let hasPrevOl = false;
+    for (let j = result.length - 1; j >= 0; j--) {
+      const trimmed = result[j].trim();
+      if (trimmed === "") continue;
+      hasPrevOl = isOrderedListItem(result[j]);
+      break;
+    }
+
+    // 向后查找：下一个非空行是否是有序列表项
+    let hasNextOl = false;
+    for (let j = bqEnd; j < lines.length; j++) {
+      const trimmed = lines[j].trim();
+      if (trimmed === "") continue;
+      hasNextOl = isOrderedListItem(lines[j]);
+      break;
+    }
+
+    if (hasPrevOl && hasNextOl) {
+      // 引用夹在两个有序列表项之间 → 缩进嵌套进前一项
+      for (let j = i; j < bqEnd; j++) {
+        const l = lines[j];
+        if (isBlockquote(l)) {
+          const content = l.replace(/^>\s?/, "");
+          result.push(`   > ${content}`);
+        } else {
+          result.push(l);
+        }
+      }
+    } else {
+      // 独立引用，照原样保留
+      for (let j = i; j < bqEnd; j++) {
+        result.push(lines[j]);
+      }
+    }
+
+    i = bqEnd;
+  }
+
+  return result.join("\n");
+}
+
 export function MarkdownPreview({
   content,
   fontSize = 14,
   renderHtml = false,
 }: MarkdownPreviewProps) {
   const { t } = useTranslation();
+  const processedContent = fixListContinuity(content);
   return (
     <div className="font-body" style={{ fontSize: `${fontSize}px` }}>
-      {content.trim() ? (
+      {processedContent.trim() ? (
         <Markdown
           remarkPlugins={remarkPlugins}
           rehypePlugins={renderHtml ? rehypePluginsWithHtml : rehypePluginsDefault}
           components={components}
         >
-          {content}
+          {processedContent}
         </Markdown>
       ) : (
         <p className="text-ink-ghost leading-[1.9]">
